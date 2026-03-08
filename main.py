@@ -130,10 +130,13 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     )
 
     raw = " ".join(block.text for block in response.content if hasattr(block, "text"))
+    print(f"RAW CLAUDE RESPONSE: {raw[:1000]}")
 
     # Try 1: direct parse
     try:
-        return json.loads(raw.strip())
+        result = json.loads(raw.strip())
+        print(f"Parse success (direct): {len(result)} camps found")
+        return result
     except json.JSONDecodeError:
         pass
 
