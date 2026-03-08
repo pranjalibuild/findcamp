@@ -76,12 +76,12 @@ def check_gates(email: str, ip: str):
             SELECT COUNT(*) as cnt FROM searches
             WHERE ip_address = ? AND searched_at > datetime('now', '-24 hours')
         """, (ip,)).fetchone()
-        if row["cnt"] > 0:
-            raise HTTPException(status_code=429, detail="You've already searched from this device today. Check back tomorrow!")
+        if row["cnt"] >= 3:
+            raise HTTPException(status_code=429, detail="You've used your 3 free searches from this device today. Check back tomorrow!")
 
         row = conn.execute("SELECT COUNT(*) as cnt FROM searches WHERE email = ?", (email,)).fetchone()
-        if row["cnt"] > 0:
-            raise HTTPException(status_code=429, detail="We've already sent results to this email. Check your inbox!")
+        if row["cnt"] >= 3:
+            raise HTTPException(status_code=429, detail="You've used your 3 free searches. Check your inbox for previous results!")
 
         today = datetime.utcnow().date().isoformat()
         conn.execute("INSERT OR IGNORE INTO daily_counts (date, count) VALUES (?, 0)", (today,))
