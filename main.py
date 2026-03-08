@@ -105,7 +105,7 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     Find {season} 2026 {camp_type} camps within {radius_km}km of {zip_or_postal} in Canada or the United States for a child aged {age}.
     {zip_or_postal} may be a Canadian postal code (e.g. V3E 2M1) or a US zip code (e.g. 90210). Use it as a geographic anchor.
 
-    Return a JSON array only — no other text. Each item must have these exact keys:
+    Return a JSON array only — no other text, no markdown, no backticks. Each item must have these exact keys:
     - name: camp name (string)
     - address: full address (string or null)
     - website: URL (string or null)
@@ -119,18 +119,25 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     - notes: any important notes (string or null)
 
     Only include camps that accept age {age}. Sort by registration_date ascending, null dates at end.
-    Return ONLY valid JSON array, nothing else.
+    Start your response with [ and end with ]. No other text.
     """
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=3000,
+        max_tokens=4000,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role": "user", "content": prompt}]
     )
 
     raw = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
+    # Try 1: direct parse
+    try:
+        return json.loads(raw.strip())
+    except json.JSONDecodeError:
+        pass
+
+    # Try 2: extract JSON array with regex (greedy)
     match = re.search(r'\[.*\]', raw, re.DOTALL)
     if match:
         try:
@@ -138,9 +145,19 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
         except json.JSONDecodeError:
             pass
 
-    return [{"name": "Results", "notes": raw, "registration_date": None,
-             "contact_email": None, "website": None, "address": None,
-             "age_range": None, "cost_per_week": None, "registration_open": False,
+    # Try 3: strip markdown code fences and retry
+    cleaned = re.sub(r'```json|```', '', raw).strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: return raw text as readable notes so email isn't empty
+    print(f"JSON parse failed. Raw response: {raw[:500]}")
+    return [{"name": "Camp results (unformatted)", "notes": raw,
+             "registration_date": None, "contact_email": None,
+             "website": None, "address": None, "age_range": None,
+             "cost_per_week": None, "registration_open": False,
              "distance_km": None, "contact_phone": None}]
 
 
