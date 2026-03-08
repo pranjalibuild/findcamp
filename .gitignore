@@ -1,0 +1,5 @@
+findcamp.db
+test.json
+.env
+__pycache__/
+*.pyc
