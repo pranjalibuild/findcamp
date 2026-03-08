@@ -1,7 +1,7 @@
 """
-remind.py — Findcamp daily reminder script
-Runs daily via Railway cron at 8am UTC.
-Sends 48h and 24h reminders before camp registration opens.
+remind.py — Railway cron job
+Runs daily at 8am UTC via Railway cron schedule: 0 8 * * *
+Checks camps table and sends 48h and 24h reminders before registration opens.
 """
 
 import os
@@ -22,20 +22,25 @@ def get_db():
     return conn
 
 
-def send_reminder(to_email: str, camp_name: str, reg_date: str, hours: int):
-    urgency = "tomorrow" if hours == 48 else "TODAY"
-    emoji = "⏰" if hours == 48 else "🚨"
+def send_reminder(to_email: str, camp_name: str, reg_date: str, hours_until: int):
+    urgency = "tomorrow" if hours_until <= 24 else "in 2 days"
+    subject = f"⏰ {camp_name} registration opens {urgency}!"
 
     html_body = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-      <h1 style="color:#2d6a4f;">{emoji} Camp registration opens {urgency}!</h1>
-      <p style="color:#333;font-size:18px;">
+      <h1 style="color:#2d6a4f;">⏰ Registration opens {urgency}!</h1>
+      <p style="color:#333;font-size:16px;">
         <strong>{camp_name}</strong> registration opens on <strong>{reg_date}</strong>.
       </p>
-      <p style="color:#555;">Spots fill up fast — don't wait. Check your previous Findcamp email for the enquiry emails and website link.</p>
+      <p style="color:#555;">Spots fill up fast — make sure you're ready to register as soon as it opens.</p>
       <div style="background:#f0f7f4;border-radius:8px;padding:16px;margin:24px 0;">
-        <p style="margin:0;color:#2d6a4f;font-weight:bold;">💡 Quick tip</p>
-        <p style="margin:8px 0 0;color:#555;">If you haven't already, send your enquiry email now so you're top of mind when registration opens.</p>
+        <p style="margin:0;color:#2d6a4f;font-weight:bold;">✅ Quick checklist:</p>
+        <ul style="color:#555;margin:8px 0;">
+          <li>Check if you got a reply to your enquiry email</li>
+          <li>Have your payment method ready</li>
+          <li>Set an alarm for 8am on registration day</li>
+          <li>Visit the camp website early — spots go fast</li>
+        </ul>
       </div>
       <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
       <p style="color:#999;font-size:13px;">Sent by <a href="https://findcamp.co" style="color:#2d6a4f;">findcamp.co</a> · Find camps before they fill up.</p>
@@ -45,43 +50,44 @@ def send_reminder(to_email: str, camp_name: str, reg_date: str, hours: int):
     resend.Emails.send({
         "from": FROM_EMAIL,
         "to": to_email,
-        "subject": f"{emoji} {camp_name} registration opens {urgency}!",
+        "subject": subject,
         "html": html_body
     })
-    print(f"Sent {hours}h reminder to {to_email} for {camp_name}")
+    print(f"Sent {hours_until}h reminder to {to_email} for {camp_name}")
 
 
 def run():
-    today = datetime.utcnow().date()
-    date_48h = (today + timedelta(days=2)).strftime("%Y-%m-%d")
-    date_24h = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+    now = datetime.utcnow()
+    in_24h = (now + timedelta(hours=24)).date().isoformat()
+    in_48h = (now + timedelta(hours=48)).date().isoformat()
 
     with get_db() as conn:
-        camps_48h = conn.execute("""
-            SELECT * FROM camps WHERE registration_open_date = ? AND reminder_48h_sent = 0
-        """, (date_48h,)).fetchall()
+        camps = conn.execute("""
+            SELECT * FROM camps
+            WHERE registration_open_date IS NOT NULL
+            AND (reminder_48h_sent = 0 OR reminder_24h_sent = 0)
+        """).fetchall()
 
-        for camp in camps_48h:
-            try:
-                send_reminder(camp["email"], camp["camp_name"], camp["registration_open_date"], 48)
-                conn.execute("UPDATE camps SET reminder_48h_sent = 1 WHERE id = ?", (camp["id"],))
-                conn.commit()
-            except Exception as e:
-                print(f"Failed 48h reminder for camp {camp['id']}: {e}")
+        for camp in camps:
+            reg_date = camp["registration_open_date"]
 
-        camps_24h = conn.execute("""
-            SELECT * FROM camps WHERE registration_open_date = ? AND reminder_24h_sent = 0
-        """, (date_24h,)).fetchall()
+            if reg_date == in_48h and not camp["reminder_48h_sent"]:
+                try:
+                    send_reminder(camp["email"], camp["camp_name"], reg_date, 48)
+                    conn.execute("UPDATE camps SET reminder_48h_sent = 1 WHERE id = ?", (camp["id"],))
+                    conn.commit()
+                except Exception as e:
+                    print(f"Error sending 48h reminder: {e}")
 
-        for camp in camps_24h:
-            try:
-                send_reminder(camp["email"], camp["camp_name"], camp["registration_open_date"], 24)
-                conn.execute("UPDATE camps SET reminder_24h_sent = 1 WHERE id = ?", (camp["id"],))
-                conn.commit()
-            except Exception as e:
-                print(f"Failed 24h reminder for camp {camp['id']}: {e}")
+            if reg_date == in_24h and not camp["reminder_24h_sent"]:
+                try:
+                    send_reminder(camp["email"], camp["camp_name"], reg_date, 24)
+                    conn.execute("UPDATE camps SET reminder_24h_sent = 1 WHERE id = ?", (camp["id"],))
+                    conn.commit()
+                except Exception as e:
+                    print(f"Error sending 24h reminder: {e}")
 
-    print(f"Done. {len(camps_48h)} 48h and {len(camps_24h)} 24h reminders sent.")
+    print(f"Reminder check complete at {now.isoformat()}")
 
 
 if __name__ == "__main__":
