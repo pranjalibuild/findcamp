@@ -102,8 +102,14 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
     prompt = f"""
-    Find {season} 2026 {camp_type} camps within {radius_km}km of {zip_or_postal} in Canada or the United States for a child aged {age}.
+    Search the web for {season} 2026 {camp_type} camps within {radius_km}km of {zip_or_postal} in Canada or the United States suitable for a child aged {age}.
     {zip_or_postal} may be a Canadian postal code (e.g. V3E 2M1) or a US zip code (e.g. 90210). Use it as a geographic anchor.
+
+    IMPORTANT RULES:
+    - Always return camps you find, even if some details are missing — use null for unknown fields
+    - Never return an empty array. If 2026 details are unavailable, include camps based on 2025 info with a note
+    - Include any camp that is likely to run in {season} 2026, even if registration hasn't opened yet
+    - Prefer local, specific camps over generic results
 
     Return a JSON array only — no other text, no markdown, no backticks. Each item must have these exact keys:
     - name: camp name (string)
@@ -118,7 +124,7 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     - distance_km: approximate km from {zip_or_postal} (number or null)
     - notes: any important notes (string or null)
 
-    Only include camps that accept age {age}. Sort by registration_date ascending, null dates at end.
+    Only include camps that accept age {age}. Aim for 5-8 camps. Sort by registration_date ascending, null dates at end.
     Start your response with [ and end with ]. No other text.
     """
 
