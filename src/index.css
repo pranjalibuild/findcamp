@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap');
+
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 153 40% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 153 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 153 40% 12%;
+
+    --primary: 153 40% 30%;
+    --primary-foreground: 40 33% 97%;
+
+    --secondary: 150 20% 92%;
+    --secondary-foreground: 153 40% 20%;
+
+    --muted: 150 15% 93%;
+    --muted-foreground: 153 15% 45%;
+
+    --accent: 38 80% 55%;
+    --accent-foreground: 153 40% 12%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 40 8% 81%;
+    --input: 40 8% 81%;
+    --ring: 153 40% 30%;
+
+    --radius: 0.75rem;
+
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
