@@ -56,7 +56,7 @@ def setup_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL,
                 camp_name TEXT,
-                postal_code TEXT,
+                zip_or_postal TEXT,
                 registration_open_date TEXT,
                 reminder_48h_sent INTEGER DEFAULT 0,
                 reminder_24h_sent INTEGER DEFAULT 0,
@@ -98,11 +98,12 @@ def record_search(email: str, ip: str):
         conn.commit()
 
 
-def search_camps(postal_code: str, radius_km: int, age: int, season: str, camp_type: str) -> list:
+def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp_type: str) -> list:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
     prompt = f"""
-    Find {season} 2026 {camp_type} camps within {radius_km}km of postal code {postal_code} in Canada for a child aged {age}.
+    Find {season} 2026 {camp_type} camps within {radius_km}km of {zip_or_postal} in Canada or the United States for a child aged {age}.
+    {zip_or_postal} may be a Canadian postal code (e.g. V3E 2M1) or a US zip code (e.g. 90210). Use it as a geographic anchor.
 
     Return a JSON array only — no other text. Each item must have these exact keys:
     - name: camp name (string)
@@ -114,7 +115,7 @@ def search_camps(postal_code: str, radius_km: int, age: int, season: str, camp_t
     - cost_per_week: e.g. "$350 CAD" (string or null)
     - registration_date: YYYY-MM-DD format (string or null)
     - registration_open: true or false (boolean)
-    - distance_km: approximate km from {postal_code} (number or null)
+    - distance_km: approximate km from {zip_or_postal} (number or null)
     - notes: any important notes (string or null)
 
     Only include camps that accept age {age}. Sort by registration_date ascending, null dates at end.
@@ -174,7 +175,7 @@ END:VCALENDAR"""
     return ics.encode("utf-8")
 
 
-def send_results_email(to_email: str, camps: list, postal_code: str, radius_km: int, season: str, camp_type: str):
+def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km: int, season: str, camp_type: str):
     camp_list_html = ""
     for i, camp in enumerate(camps, 1):
         reg_date = camp.get("registration_date")
@@ -203,7 +204,7 @@ def send_results_email(to_email: str, camps: list, postal_code: str, radius_km: 
           <p style="margin:0 0 8px;font-size:13px;color:#555;">To: {camp.get('contact_email')} · Subject: Enquiry about {season} 2026 Camp Programs</p>
           <div style="background:white;padding:12px;border-radius:4px;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;">Hi there,
 
-I'm looking for a {season} 2026 {camp_type} camp for my child near {postal_code} and came across {camp.get('name')}. I'd love to learn more.
+I'm looking for a {season} 2026 {camp_type} camp for my child near {zip_or_postal} and came across {camp.get('name')}. I'd love to learn more.
 
 Could you please share:
 - Available sessions and dates for {season} 2026
@@ -230,7 +231,7 @@ Thank you so much — looking forward to hearing from you!
     html_body = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
       <h1 style="color:#2d6a4f;">🏕️ Your Findcamp Results</h1>
-      <p style="color:#555;">{season} {camp_type} camps within {radius_km}km of {postal_code}</p>
+      <p style="color:#555;">{season} {camp_type} camps within {radius_km}km of {zip_or_postal}</p>
       {calendar_note}
       <h2 style="color:#2d6a4f;border-bottom:2px solid #eee;padding-bottom:8px;">Camps Found</h2>
       {camp_list_html}
@@ -255,7 +256,7 @@ Thank you so much — looking forward to hearing from you!
     email_params = {
         "from": FROM_EMAIL,
         "to": to_email,
-        "subject": f"🏕️ Your {season} camp results near {postal_code}",
+        "subject": f"🏕️ Your {season} camp results near {zip_or_postal}",
         "html": html_body,
     }
     if attachments:
@@ -264,34 +265,34 @@ Thank you so much — looking forward to hearing from you!
     resend.Emails.send(email_params)
 
 
-def store_camps(email: str, postal_code: str, camps: list):
+def store_camps(email: str, zip_or_postal: str, camps: list):
     with get_db() as conn:
         for camp in camps:
             if camp.get("registration_date"):
                 conn.execute("""
-                    INSERT INTO camps (email, camp_name, postal_code, registration_open_date)
+                    INSERT INTO camps (email, camp_name, zip_or_postal, registration_open_date)
                     VALUES (?, ?, ?, ?)
-                """, (email, camp.get("name", "")[:200], postal_code, camp["registration_date"]))
+                """, (email, camp.get("name", "")[:200], zip_or_postal, camp["registration_date"]))
         conn.commit()
 
 
 class SearchRequest(BaseModel):
     email: str
-    postal_code: str
-    radius_km: int = 10
+    zip_or_postal: str    # Canadian postal code (V3E 2M1) or US zip code (90210)
+    radius_km: int = 10   # 5 = Nearby, 10 = Short drive, 20 = Worth the trip
     age: int
-    season: str
-    camp_type: str
+    season: str           # Summer | Spring | Fall | Winter
+    camp_type: str        # Sports | Arts | STEM | Outdoors | General | Religious
 
 
 @app.post("/search")
 async def search(request: Request, body: SearchRequest):
     ip = request.client.host
     check_gates(body.email, ip)
-    camps = search_camps(body.postal_code, body.radius_km, body.age, body.season, body.camp_type)
+    camps = search_camps(body.zip_or_postal, body.radius_km, body.age, body.season, body.camp_type)
     record_search(body.email, ip)
-    send_results_email(body.email, camps, body.postal_code, body.radius_km, body.season, body.camp_type)
-    store_camps(body.email, body.postal_code, camps)
+    send_results_email(body.email, camps, body.zip_or_postal, body.radius_km, body.season, body.camp_type)
+    store_camps(body.email, body.zip_or_postal, camps)
     return {"status": "success", "message": f"Results sent to {body.email}"}
 
 
