@@ -192,7 +192,7 @@ END:VCALENDAR"""
     return ics.encode("utf-8")
 
 
-def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km: int, season: str, camp_type: str):
+def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km: int, age: int, season: str, camp_type: str):
     camp_list_html = ""
     for i, camp in enumerate(camps, 1):
         reg_date = camp.get("registration_date")
@@ -203,7 +203,7 @@ def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km
         <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:16px;">
           <h3 style="margin:0 0 8px;color:#2d6a4f;">{i}. {camp.get('name','Unknown')}</h3>
           <p style="margin:4px 0;color:#555;">📍 {camp.get('address','Address TBD')}{distance}</p>
-          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')} · 💰 {camp.get('cost_per_week','Cost TBD')}</p>
+          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
           <p style="margin:4px 0;color:#555;">{reg_status}</p>
           {f'<p style="margin:4px 0;"><a href="{camp.get("website")}" style="color:#2d6a4f;">Visit website →</a></p>' if camp.get('website') else ''}
           {f'<p style="margin:4px 0;color:#555;">✉️ {camp.get("contact_email")}</p>' if camp.get('contact_email') else ''}
@@ -218,13 +218,15 @@ def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km
         enquiry_html += f"""
         <div style="background:#f0f7f4;border-left:4px solid #2d6a4f;padding:16px;margin-bottom:16px;border-radius:0 8px 8px 0;">
           <p style="margin:0 0 4px;font-weight:bold;color:#2d6a4f;">✉️ {camp.get('name')}</p>
-          <p style="margin:0 0 8px;font-size:13px;color:#555;">To: {camp.get('contact_email')} · Subject: Enquiry about {season} 2026 Camp Programs</p>
-          <div style="background:white;padding:12px;border-radius:4px;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;">Hi there,
+          <p style="margin:0 0 4px;font-size:13px;color:#555;">To: {camp.get('contact_email')} · Subject: Enquiry about {season} 2026 Camp Programs</p>
+          <p style="margin:0 0 8px;font-size:12px;color:#888;font-style:italic;">✏️ Fill in your name and phone before sending</p>
+          <div style="background:white;padding:12px;border-radius:4px;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;">Hi {camp.get('name')} team,
 
-I'm looking for a {season} 2026 {camp_type} camp for my child near {zip_or_postal} and came across {camp.get('name')}. I'd love to learn more.
+I'm looking for a {season} 2026 {camp_type} camp for my {age}-year-old near {zip_or_postal}. I came across your program and would love to learn more.
 
 Could you please share:
 - Available sessions and dates for {season} 2026
+- Whether you still have spots for a {age}-year-old
 - Registration process and any waitlist options
 - Cost per week and what's included
 
@@ -308,7 +310,7 @@ async def search(request: Request, body: SearchRequest):
     check_gates(body.email, ip)
     camps = search_camps(body.zip_or_postal, body.radius_km, body.age, body.season, body.camp_type)
     record_search(body.email, ip)
-    send_results_email(body.email, camps, body.zip_or_postal, body.radius_km, body.season, body.camp_type)
+    send_results_email(body.email, camps, body.zip_or_postal, body.radius_km, body.age, body.season, body.camp_type)
     store_camps(body.email, body.zip_or_postal, camps)
     return {"status": "success", "message": f"Results sent to {body.email}"}
 
