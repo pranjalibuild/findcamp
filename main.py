@@ -318,3 +318,15 @@ async def search(request: Request, body: SearchRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/reset-email")
+def reset_email(body: dict):
+    email = body.get("email", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    with get_db() as conn:
+        conn.execute("DELETE FROM searches WHERE email = ?", (email,))
+        conn.execute("DELETE FROM camps WHERE email = ?", (email,))
+        conn.commit()
+    return {"status": "ok", "message": f"Reset {email}"}
