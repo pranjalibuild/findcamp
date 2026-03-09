@@ -118,6 +118,7 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     - contact_email: email address (string or null)
     - contact_phone: phone number (string or null)
     - age_range: e.g. "5-12" (string or null)
+    - duration: e.g. "Full day", "Half day AM", "Half day PM" (string or null)
     - cost_per_week: e.g. "$350 CAD" (string or null)
     - registration_date: YYYY-MM-DD format (string or null)
     - registration_open: true or false (boolean)
@@ -166,7 +167,7 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     return [{"name": "Camp results (unformatted)", "notes": raw,
              "registration_date": None, "contact_email": None,
              "website": None, "address": None, "age_range": None,
-             "cost_per_week": None, "registration_open": False,
+             "duration": None, "cost_per_week": None, "registration_open": False,
              "distance_km": None, "contact_phone": None}]
 
 
@@ -212,7 +213,7 @@ def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km
         <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:16px;">
           <h3 style="margin:0 0 8px;color:#2d6a4f;">{i}. {camp.get('name','Unknown')}</h3>
           <p style="margin:4px 0;color:#555;">📍 {camp.get('address','Address TBD')}{distance}</p>
-          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
+          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · ⏰ {camp.get('duration')}" if camp.get('duration') else ""}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
           <p style="margin:4px 0;color:#555;">{reg_status}</p>
           {f'<p style="margin:4px 0;"><a href="{camp.get("website")}" style="color:#2d6a4f;">Visit website →</a></p>' if camp.get('website') else ''}
           {f'<p style="margin:4px 0;color:#555;">✉️ {camp.get("contact_email")}</p>' if camp.get('contact_email') else ''}
