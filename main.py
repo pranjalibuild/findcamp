@@ -257,11 +257,17 @@ Thank you so much — looking forward to hearing from you!
           <p style="margin:0;color:#555;">📅 <strong>Calendar reminders attached!</strong> Open the .ics files to add registration day events to your calendar. We'll also email you 48h and 24h before each registration opens.</p>
         </div>"""
 
+    disclaimer = """
+    <div style="background:#fef3cd;border-radius:8px;padding:16px;margin-bottom:24px;">
+      <p style="margin:0;color:#664d03;font-size:13px;">⚠️ Camp details are based on available online information and may reflect 2025 programs. Registration dates and costs for 2026 are estimates. Always confirm directly with the camp.</p>
+    </div>"""
+
     html_body = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
       <h1 style="color:#2d6a4f;">🏕️ Your Findcamp Results</h1>
       <p style="color:#555;">{season} {camp_type} camps within {radius_km}km of {zip_or_postal}</p>
       {calendar_note}
+      {disclaimer}
       <h2 style="color:#2d6a4f;border-bottom:2px solid #eee;padding-bottom:8px;">Camps Found</h2>
       {camp_list_html}
       <h2 style="color:#2d6a4f;border-bottom:2px solid #eee;padding-bottom:8px;margin-top:32px;">Ready-to-Send Enquiry Emails</h2>
