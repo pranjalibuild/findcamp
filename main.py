@@ -83,7 +83,7 @@ def check_gates(email: str, ip: str):
         if row["cnt"] >= 3:
             raise HTTPException(status_code=429, detail="You've used your 3 free searches. Check your inbox for previous results!")
 
-        today = datetime.utcnow().date().isoformat()
+        today = datetime.now(datetime.timezone.utc).replace(tzinfo=None).date().isoformat()
         conn.execute("INSERT OR IGNORE INTO daily_counts (date, count) VALUES (?, 0)", (today,))
         row = conn.execute("SELECT count FROM daily_counts WHERE date = ?", (today,)).fetchone()
         if row and row["count"] >= DAILY_SEARCH_CAP:
@@ -91,7 +91,7 @@ def check_gates(email: str, ip: str):
 
 
 def record_search(email: str, ip: str):
-    today = datetime.utcnow().date().isoformat()
+    today = datetime.now(datetime.timezone.utc).replace(tzinfo=None).date().isoformat()
     with get_db() as conn:
         conn.execute("INSERT INTO searches (email, ip_address) VALUES (?, ?)", (email, ip))
         conn.execute("UPDATE daily_counts SET count = count + 1 WHERE date = ?", (today,))
@@ -118,10 +118,11 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     - contact_email: email address (string or null)
     - contact_phone: phone number (string or null)
     - age_range: e.g. "5-12" (string or null)
+    - accommodation_type: "Day camp", "Overnight", or "Sleep-away" (string or null)
     - camp_dates: when camp runs, e.g. "June 15-19, 2026" (string or null)
     - session_length: duration of camp e.g. "5 days", "1 week" (string or null)
     - daily_schedule: e.g. "Full day", "Half day AM", "Half day PM" (string or null)
-    - cost_per_week: e.g. "$350 CAD" (string or null)
+    - cost_per_week: e.g. "$350 CAD per week" (string or null)
     - registration_date: YYYY-MM-DD format (string or null)
     - registration_open: true or false (boolean)
     - distance_km: approximate km from {zip_or_postal} (number or null)
@@ -169,7 +170,7 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     return [{"name": "Camp results (unformatted)", "notes": raw,
              "registration_date": None, "contact_email": None,
              "website": None, "address": None, "age_range": None,
-             "camp_dates": None, "session_length": None, "daily_schedule": None,
+             "accommodation_type": None, "camp_dates": None, "session_length": None, "daily_schedule": None,
              "cost_per_week": None, "registration_open": False,
              "distance_km": None, "contact_phone": None}]
 
@@ -181,7 +182,7 @@ def generate_ics(camp_name: str, reg_date_str: str) -> bytes:
         return None
 
     uid = f"findcamp-{re.sub(r'[^a-z0-9]', '-', camp_name.lower())}-{reg_date_str}@findcamp.co"
-    now = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime("%Y%m%dT%H%M%SZ")
     event_date = reg_date.strftime("%Y%m%d")
 
     ics = f"""BEGIN:VCALENDAR
@@ -218,7 +219,8 @@ def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km
         <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:16px;">
           <h3 style="margin:0 0 8px;color:#2d6a4f;">{i}. {camp.get('name','Unknown')}</h3>
           <p style="margin:4px 0;color:#555;">📍 {camp.get('address','Address TBD')}{distance}</p>
-          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
+          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · 🏠 {camp.get('accommodation_type')}" if camp.get('accommodation_type') else ""}</p>
+          {f'<p style="margin:4px 0;color:#555;font-weight:bold;">💰 Cost: {camp.get("cost_per_week")}</p>' if camp.get('cost_per_week') else ''}
           {f'<p style="margin:4px 0;color:#555;">📅 Camp Dates: {camp.get("camp_dates")}</p>' if camp.get('camp_dates') else ''}
           {f'<p style="margin:4px 0;color:#555;">⏱️ Duration: {camp.get("session_length")}</p>' if camp.get('session_length') else ''}
           {f'<p style="margin:4px 0;color:#555;">⏰ Daily Schedule: {camp.get("daily_schedule")}</p>' if camp.get('daily_schedule') else ''}

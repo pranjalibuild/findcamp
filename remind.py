@@ -57,7 +57,7 @@ def send_reminder(to_email: str, camp_name: str, reg_date: str, hours_until: int
 
 
 def run():
-    now = datetime.utcnow()
+    now = datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     in_24h = (now + timedelta(hours=24)).date().isoformat()
     in_48h = (now + timedelta(hours=48)).date().isoformat()
 
