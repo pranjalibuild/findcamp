@@ -118,7 +118,9 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     - contact_email: email address (string or null)
     - contact_phone: phone number (string or null)
     - age_range: e.g. "5-12" (string or null)
-    - duration: e.g. "Full day", "Half day AM", "Half day PM" (string or null)
+    - camp_dates: when camp runs, e.g. "June 15-19, 2026" (string or null)
+    - session_length: duration of camp e.g. "5 days", "1 week" (string or null)
+    - daily_schedule: e.g. "Full day", "Half day AM", "Half day PM" (string or null)
     - cost_per_week: e.g. "$350 CAD" (string or null)
     - registration_date: YYYY-MM-DD format (string or null)
     - registration_open: true or false (boolean)
@@ -167,7 +169,8 @@ def search_camps(zip_or_postal: str, radius_km: int, age: int, season: str, camp
     return [{"name": "Camp results (unformatted)", "notes": raw,
              "registration_date": None, "contact_email": None,
              "website": None, "address": None, "age_range": None,
-             "duration": None, "cost_per_week": None, "registration_open": False,
+             "camp_dates": None, "session_length": None, "daily_schedule": None,
+             "cost_per_week": None, "registration_open": False,
              "distance_km": None, "contact_phone": None}]
 
 
@@ -206,15 +209,20 @@ def send_results_email(to_email: str, camps: list, zip_or_postal: str, radius_km
     camp_list_html = ""
     for i, camp in enumerate(camps, 1):
         reg_date = camp.get("registration_date")
-        reg_status = "✅ Open now" if camp.get("registration_open") else f"📅 Opens {reg_date}" if reg_date else "📅 Date TBD"
+        reg_status = "🔴 Registration Opens " + reg_date if reg_date else "📅 Registration Date TBD"
+        if camp.get("registration_open"):
+            reg_status = "🟢 Registration Open Now"
         distance = f" · {camp.get('distance_km')}km away" if camp.get("distance_km") else ""
 
         camp_list_html += f"""
         <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:16px;">
           <h3 style="margin:0 0 8px;color:#2d6a4f;">{i}. {camp.get('name','Unknown')}</h3>
           <p style="margin:4px 0;color:#555;">📍 {camp.get('address','Address TBD')}{distance}</p>
-          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · ⏰ {camp.get('duration')}" if camp.get('duration') else ""}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
-          <p style="margin:4px 0;color:#555;">{reg_status}</p>
+          <p style="margin:4px 0;color:#555;">👧 Ages: {camp.get('age_range','TBD')}{f" · 💰 {camp.get('cost_per_week')}" if camp.get('cost_per_week') else ""}</p>
+          {f'<p style="margin:4px 0;color:#555;">📅 Camp Dates: {camp.get("camp_dates")}</p>' if camp.get('camp_dates') else ''}
+          {f'<p style="margin:4px 0;color:#555;">⏱️ Duration: {camp.get("session_length")}</p>' if camp.get('session_length') else ''}
+          {f'<p style="margin:4px 0;color:#555;">⏰ Daily Schedule: {camp.get("daily_schedule")}</p>' if camp.get('daily_schedule') else ''}
+          <p style="margin:4px 0;color:#555;font-weight:bold;">{reg_status}</p>
           {f'<p style="margin:4px 0;"><a href="{camp.get("website")}" style="color:#2d6a4f;">Visit website →</a></p>' if camp.get('website') else ''}
           {f'<p style="margin:4px 0;color:#555;">✉️ {camp.get("contact_email")}</p>' if camp.get('contact_email') else ''}
           {f'<p style="margin:4px 0;color:#555;">📞 {camp.get("contact_phone")}</p>' if camp.get('contact_phone') else ''}
