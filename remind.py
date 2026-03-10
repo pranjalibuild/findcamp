@@ -7,7 +7,7 @@ Checks camps table and sends 48h and 24h reminders before registration opens.
 import os
 import sqlite3
 import resend
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 DB_PATH = "findcamp.db"
 RESEND_API_KEY = os.environ["RESEND_API_KEY"]
@@ -57,7 +57,7 @@ def send_reminder(to_email: str, camp_name: str, reg_date: str, hours_until: int
 
 
 def run():
-    now = datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     in_24h = (now + timedelta(hours=24)).date().isoformat()
     in_48h = (now + timedelta(hours=48)).date().isoformat()
 

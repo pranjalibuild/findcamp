@@ -10,7 +10,7 @@ import base64
 import sqlite3
 import anthropic
 import resend
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -83,7 +83,7 @@ def check_gates(email: str, ip: str):
         if row["cnt"] >= 3:
             raise HTTPException(status_code=429, detail="You've used your 3 free searches. Check your inbox for previous results!")
 
-        today = datetime.now(datetime.timezone.utc).replace(tzinfo=None).date().isoformat()
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date().isoformat()
         conn.execute("INSERT OR IGNORE INTO daily_counts (date, count) VALUES (?, 0)", (today,))
         row = conn.execute("SELECT count FROM daily_counts WHERE date = ?", (today,)).fetchone()
         if row and row["count"] >= DAILY_SEARCH_CAP:
@@ -91,7 +91,7 @@ def check_gates(email: str, ip: str):
 
 
 def record_search(email: str, ip: str):
-    today = datetime.now(datetime.timezone.utc).replace(tzinfo=None).date().isoformat()
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date().isoformat()
     with get_db() as conn:
         conn.execute("INSERT INTO searches (email, ip_address) VALUES (?, ?)", (email, ip))
         conn.execute("UPDATE daily_counts SET count = count + 1 WHERE date = ?", (today,))
@@ -182,7 +182,7 @@ def generate_ics(camp_name: str, reg_date_str: str) -> bytes:
         return None
 
     uid = f"findcamp-{re.sub(r'[^a-z0-9]', '-', camp_name.lower())}-{reg_date_str}@findcamp.co"
-    now = datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%dT%H%M%SZ")
     event_date = reg_date.strftime("%Y%m%d")
 
     ics = f"""BEGIN:VCALENDAR
