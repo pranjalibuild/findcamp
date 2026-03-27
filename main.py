@@ -62,6 +62,12 @@ def setup_db():
                 reminder_24h_sent INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS referral_clicks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                camp_slug TEXT NOT NULL,
+                ip TEXT,
+                clicked_at TEXT NOT NULL
+            );
         """)
 
 
@@ -356,3 +362,16 @@ def reset_email(body: dict):
         conn.execute("DELETE FROM camps WHERE email = ?", (email,))
         conn.commit()
     return {"status": "ok", "message": f"Reset {email}"}
+
+
+@app.post("/track-referral")
+async def track_referral(request: Request):
+    """Track clicks from the Featured Camp banner to Eastside Story Guild."""
+    ip = request.client.host
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO referral_clicks (camp_slug, ip, clicked_at) VALUES (?, ?, ?)",
+            ("eastside-story-guild", ip, datetime.utcnow().isoformat())
+        )
+        conn.commit()
+    return {"ok": True}
