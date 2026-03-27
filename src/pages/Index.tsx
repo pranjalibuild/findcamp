@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Mail, Bell, TreePine, X } from "lucide-react";
 import Testimonials from "@/components/Testimonials";
+import FeaturedCamp from "@/components/FeaturedCamp";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -245,6 +246,9 @@ const Index = () => {
 
       {/* Testimonials */}
       <Testimonials />
+
+      {/* Featured Camp */}
+      <FeaturedCamp />
 
       {/* Footer */}
       <footer className="py-6 px-6 text-center text-muted-foreground text-sm">
